@@ -173,6 +173,7 @@ public class Startup : IWebStartup
     {
         app.UseExceptionHandler("/Error/Code500");
         app.UseStatusCodePagesWithReExecute("/Error/Code{0}");
+        app.UseMiddleware<OgTagMiddleware>();
         app.UseUIStack();
         app.UseStaticFiles();
         app.UseRouting();

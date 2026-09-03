@@ -3,12 +3,12 @@ ARG PROJ_NAME="Aiursoft.HowToCookViewer"
 
 # ============
 # Prepare NPM Environment
-FROM --platform=$BUILDPLATFORM hub.aiursoft.com/node:24-alpine AS npm-env
+FROM --platform=$BUILDPLATFORM node:24-alpine AS npm-env
 ARG CSPROJ_PATH
 WORKDIR /src
 # Only copy package files to take advantage of Docker cache
-COPY ${CSPROJ_PATH}wwwroot/package.json ${CSPROJ_PATH}wwwroot/package-lock.json* ${CSPROJ_PATH}wwwroot/.npmrc* /src/${CSPROJ_PATH}wwwroot/
-RUN npm install --prefix "${CSPROJ_PATH}wwwroot" --loglevel verbose
+COPY ${CSPROJ_PATH}wwwroot/package.json ${CSPROJ_PATH}wwwroot/package-lock.json* /src/${CSPROJ_PATH}wwwroot/
+RUN npm install --prefix "${CSPROJ_PATH}wwwroot" --registry https://registry.npmmirror.com --loglevel verbose
 
 # Build frontend (slims node_modules to only "keep" declared packages)
 COPY ${CSPROJ_PATH}wwwroot/build.mjs /src/${CSPROJ_PATH}wwwroot/build.mjs
@@ -16,7 +16,7 @@ RUN npm run build --prefix "${CSPROJ_PATH}wwwroot"
 
 # ============================
 # Prepare Building Environment
-FROM --platform=$BUILDPLATFORM hub.aiursoft.com/aiursoft/internalimages/dotnet AS build-env
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build-env
 ARG CSPROJ_PATH
 ARG PROJ_NAME
 ARG TARGETARCH
@@ -27,27 +27,24 @@ COPY . .
 COPY --from=npm-env /src/${CSPROJ_PATH}wwwroot/node_modules /src/${CSPROJ_PATH}wwwroot/node_modules
 
 # Build
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
-        RID="linux-arm64"; \
-    elif [ "$TARGETARCH" = "amd64" ]; then \
-        RID="linux-x64"; \
-    else \
-        RID="linux-$TARGETARCH"; \
-    fi && \
-    echo "Building for arch: $TARGETARCH, using .NET RID: $RID" && \
+RUN ARCH=$TARGETARCH && \
+    if [ "$ARCH" = "arm64" ]; then RID="linux-arm64"; \
+    elif [ "$ARCH" = "amd64" ]; then RID="linux-x64"; \
+    else RID="linux-$ARCH"; fi && \
+    echo "Building for arch: $ARCH, using .NET RID: $RID" && \
     dotnet publish ${CSPROJ_PATH}${PROJ_NAME}.csproj --configuration Release --no-self-contained --runtime $RID --output /app --configfile nuget.config
 
 RUN cp -r ${CSPROJ_PATH}/wwwroot/* /app/wwwroot
 
 # ============================
 # Prepare Runtime Environment
-FROM hub.aiursoft.com/aiursoft/internalimages/dotnetonlyruntime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 ARG PROJ_NAME
 WORKDIR /app
 COPY --from=build-env /app .
 
 # Install git and git-lfs (required by SyncHowToCookRepoJob)
-RUN apt-get update && apt-get install -y --no-install-recommends git git-lfs && rm -rf /var/lib/apt/lists/* && git lfs install --system
+RUN apt-get update && apt-get install -y --no-install-recommends git git-lfs wget && rm -rf /var/lib/apt/lists/* && git lfs install --system
 
 # Edit appsettings.json
 RUN sed -i 's/DataSource=app.db/DataSource=\/data\/app.db/g' appsettings.json

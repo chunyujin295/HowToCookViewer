@@ -40,4 +40,10 @@ public class DetailViewModel : UiStackLayoutViewModel
     public List<ContributorViewModel> Contributors { get; set; } = [];
 
     public bool ShowSimilarRecipesButton { get; set; }
+
+    /// <summary>OG image URL for social sharing preview.</summary>
+    public string? OgImageUrl { get; set; }
+
+    /// <summary>OG description for social sharing preview.</summary>
+    public string? OgDescription { get; set; }
 }

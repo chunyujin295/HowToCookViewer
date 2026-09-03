@@ -262,6 +262,22 @@ public class RecipesController(
         var gitHubHistoryUrl = $"{repoWebUrl}/commits/master/{recipe.FilePath.Replace('\\', '/')}";
         var contributors = await recipeContributorService.GetContributorsAsync(recipe.FilePath);
 
+        // Build OG image URL from cover image
+        var coverImage = recipe.Images.FirstOrDefault(p => p.IsCover);
+        var ogImageUrl = coverImage != null
+            ? storageService.RelativePathToInternetUrl(coverImage.LogicalPath)
+            : $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}/logo.svg";
+
+        // Build OG description from recipe description
+        var ogDescription = !string.IsNullOrWhiteSpace(recipe.Description)
+            ? recipe.Description.Trim()
+            : $"HowToCook - {localized?.LocalizedName ?? recipe.Name}";
+
+        // Set OG tags via HttpContext.Items for the layout
+        HttpContext.Items["OgTitle"] = $"{localized?.LocalizedName ?? recipe.Name} | HowToCook";
+        HttpContext.Items["OgDescription"] = ogDescription;
+        HttpContext.Items["OgImageUrl"] = ogImageUrl;
+
         return this.StackView(new DetailViewModel
         {
             PageTitle = localized?.LocalizedName ?? recipe.Name,
@@ -276,7 +292,9 @@ public class RecipesController(
             CategoryDisplayName = GetDisplayName(recipe.Category, null, null),
             LocalizedRecipe = localized,
             Contributors = contributors,
-            ShowSimilarRecipesButton = embeddingCache.Count > 0 && embeddingCache.Count >= await db.Recipes.CountAsync()
+            ShowSimilarRecipesButton = embeddingCache.Count > 0 && embeddingCache.Count >= await db.Recipes.CountAsync(),
+            OgImageUrl = ogImageUrl,
+            OgDescription = ogDescription
         });
     }
 
