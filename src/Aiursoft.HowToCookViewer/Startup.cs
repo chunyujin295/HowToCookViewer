@@ -173,6 +173,19 @@ public class Startup : IWebStartup
     {
         app.UseExceptionHandler("/Error/Code500");
         app.UseStatusCodePagesWithReExecute("/Error/Code{0}");
+
+        // Redirect case-insensitive /howtocook to /HowToCook
+        app.Use(async (context, next) =>
+        {
+            var path = context.Request.Path.Value;
+            if (string.Equals(path, "/howtocook", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Response.Redirect("/HowToCook", permanent: true);
+                return;
+            }
+            await next();
+        });
+
         app.UseMiddleware<OgTagMiddleware>();
         app.UseUIStack();
         app.UseStaticFiles();
