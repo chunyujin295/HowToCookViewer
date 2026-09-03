@@ -15,7 +15,7 @@ HowToCook 菜谱查看器 - 菜谱可视化与网站
 
 ## 在线体验
 
-点击这里体验 [HowToCook 在线版](https://howtocook.aiursoft.com)
+点击这里体验 [HowToCook 在线版](https://codis.fun/HotToCook)
 
 ## 使用 Docker 部署（推荐）
 
