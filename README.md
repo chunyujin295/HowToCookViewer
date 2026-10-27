@@ -32,7 +32,9 @@ cd HowToCookViewer
 docker build -t howtocookviewer-custom .
 
 # 运行容器
-docker run -d --name howtocookviewer --restart unless-stopped -p 5000:5000 -v /var/www/howtocookviewer:/data howtocookviewer-custom
+docker run -d --name howtocookviewer --restart unless-stopped \
+  --log-opt max-size=10m --log-opt max-file=3 \
+  -p 5000:5000 -v /var/www/howtocookviewer:/data howtocookviewer-custom
 ```
 
 ### 使用原始镜像
@@ -41,10 +43,20 @@ docker run -d --name howtocookviewer --restart unless-stopped -p 5000:5000 -v /v
 image=aiursoft/howtocookviewer
 appName=howtocookviewer
 sudo docker pull $image
-sudo docker run -d --name $appName --restart unless-stopped -p 5000:5000 -v /var/www/$appName:/data $image
+sudo docker run -d --name $appName --restart unless-stopped \
+  --log-opt max-size=10m --log-opt max-file=3 \
+  -p 5000:5000 -v /var/www/$appName:/data $image
 ```
 
 启动后，访问 `http://localhost:5000` 即可使用。
+
+容器日志默认不轮转，长时间运行会把磁盘写满。上面的命令已带 `--log-opt max-size=10m --log-opt max-file=3`：单个日志最大 10MB、最多保留 3 个。已有旧容器可直接删掉重建（数据都在 `/data` 挂载卷里，不会丢）：
+
+```bash
+docker stop howtocookviewer && docker rm howtocookviewer
+# 再执行上面的 docker run 命令
+docker logs -f howtocookviewer   # 查看日志
+```
 
 Docker 镜像配置：
 
